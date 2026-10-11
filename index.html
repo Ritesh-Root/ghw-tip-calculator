@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tip Calculator</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --surface: #1a2332;
+      --border: #2d3a4f;
+      --text: #e8edf4;
+      --muted: #8b9cb3;
+      --accent: #3d9cf5;
+      --accent-hover: #5aadff;
+      --accent-active: #2b7fd4;
+      --success: #3dd68c;
+      --error: #f87171;
+      --radius: 12px;
+      --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: var(--font);
+      background: radial-gradient(ellipse 120% 80% at 50% -20%, #1e3a5f 0%, var(--bg) 55%);
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+
+    .calculator {
+      width: 100%;
+      max-width: 420px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: calc(var(--radius) + 4px);
+      padding: 1.75rem;
+      box-shadow: 0 24px 48px rgba(0, 0, 0, 0.35);
+    }
+
+    h1 {
+      margin: 0 0 0.25rem;
+      font-size: 1.5rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+
+    .subtitle {
+      margin: 0 0 1.5rem;
+      font-size: 0.875rem;
+      color: var(--muted);
+    }
+
+    .field {
+      margin-bottom: 1.25rem;
+    }
+
+    label {
+      display: block;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      color: var(--muted);
+      margin-bottom: 0.4rem;
+    }
+
+    input[type="number"] {
+      width: 100%;
+      padding: 0.65rem 0.85rem;
+      font-size: 1rem;
+      font-family: inherit;
+      color: var(--text);
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    input[type="number"]:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(61, 156, 245, 0.2);
+    }
+
+    input.invalid {
+      border-color: var(--error);
+      box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.15);
+    }
+
+    .error-msg {
+      font-size: 0.75rem;
+      color: var(--error);
+      margin-top: 0.35rem;
+      min-height: 1rem;
+    }
+
+    .tip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .tip-btn {
+      flex: 1 1 calc(25% - 0.5rem);
+      min-width: 3.5rem;
+      padding: 0.55rem 0.5rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      font-family: inherit;
+      color: var(--text);
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+
+    .tip-btn:hover {
+      border-color: var(--accent);
+      background: rgba(61, 156, 245, 0.08);
+    }
+
+    .tip-btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    .tip-btn.active:hover {
+      background: var(--accent-hover);
+    }
+
+    .results {
+      margin-top: 1.5rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .result-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      padding: 0.5rem 0;
+    }
+
+    .result-row.highlight {
+      margin-top: 0.25rem;
+      padding: 0.85rem 1rem;
+      background: rgba(61, 156, 245, 0.1);
+      border-radius: var(--radius);
+      border: 1px solid rgba(61, 156, 245, 0.25);
+    }
+
+    .result-label {
+      font-size: 0.9375rem;
+      color: var(--muted);
+    }
+
+    .result-value {
+      font-size: 1.125rem;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .result-row.highlight .result-label {
+      color: var(--text);
+      font-weight: 500;
+    }
+
+    .result-row.highlight .result-value {
+      font-size: 1.375rem;
+      color: var(--success);
+    }
+
+    .results.invalid-state .result-value {
+      color: var(--muted);
+    }
+
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+  </style>
+</head>
+<body>
+  <main class="calculator" aria-labelledby="app-title">
+    <h1 id="app-title">Tip Calculator</h1>
+    <p class="subtitle">Split the bill and tip fairly.</p>
+
+    <div class="field">
+      <label for="bill">Bill amount ($)</label>
+      <input type="number" id="bill" min="0" step="0.01" placeholder="0.00" inputmode="decimal">
+      <p class="error-msg" id="bill-error" role="alert"></p>
+    </div>
+
+    <div class="field">
+      <label>Tip percentage</label>
+      <div class="tip-row" role="group" aria-label="Quick tip percentages">
+        <button type="button" class="tip-btn" data-tip="10">10%</button>
+        <button type="button" class="tip-btn" data-tip="15">15%</button>
+        <button type="button" class="tip-btn active" data-tip="18">18%</button>
+        <button type="button" class="tip-btn" data-tip="20">20%</button>
+      </div>
+      <label for="tip-custom" class="visually-hidden">Custom tip percent</label>
+      <input type="number" id="tip-custom" min="0" step="0.1" placeholder="Custom %" inputmode="decimal">
+      <p class="error-msg" id="tip-error" role="alert"></p>
+    </div>
+
+    <div class="field">
+      <label for="people">Number of people</label>
+      <input type="number" id="people" min="1" step="1" value="1" inputmode="numeric">
+      <p class="error-msg" id="people-error" role="alert"></p>
+    </div>
+
+    <section class="results" id="results" aria-live="polite">
+      <div class="result-row">
+        <span class="result-label">Tip amount</span>
+        <span class="result-value" id="tip-amount">$0.00</span>
+      </div>
+      <div class="result-row">
+        <span class="result-label">Total (bill + tip)</span>
+        <span class="result-value" id="total">$0.00</span>
+      </div>
+      <div class="result-row highlight">
+        <span class="result-label">Per person</span>
+        <span class="result-value" id="per-person">$0.00</span>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    (function () {
+      const billEl = document.getElementById("bill");
+      const tipCustomEl = document.getElementById("tip-custom");
+      const peopleEl = document.getElementById("people");
+      const tipBtns = document.querySelectorAll(".tip-btn");
+      const resultsEl = document.getElementById("results");
+      const tipAmountEl = document.getElementById("tip-amount");
+      const totalEl = document.getElementById("total");
+      const perPersonEl = document.getElementById("per-person");
+
+      const billErrorEl = document.getElementById("bill-error");
+      const tipErrorEl = document.getElementById("tip-error");
+      const peopleErrorEl = document.getElementById("people-error");
+
+      let selectedTipPercent = 18;
+
+      function parseNumber(value) {
+        if (value === "" || value === null || value === undefined) {
+          return null;
+        }
+        const n = Number(value);
+        if (Number.isNaN(n)) {
+          return NaN;
+        }
+        return n;
+      }
+
+      function formatMoney(amount) {
+        return "$" + amount.toFixed(2);
+      }
+
+      function setInputInvalid(input, errorEl, message) {
+        input.classList.add("invalid");
+        errorEl.textContent = message;
+      }
+
+      function clearInputInvalid(input, errorEl) {
+        input.classList.remove("invalid");
+        errorEl.textContent = "";
+      }
+
+      function syncTipButtons(percent) {
+        tipBtns.forEach(function (btn) {
+          const p = Number(btn.getAttribute("data-tip"));
+          btn.classList.toggle("active", p === percent);
+        });
+      }
+
+      function getTipPercent() {
+        const custom = tipCustomEl.value.trim();
+        if (custom !== "") {
+          return parseNumber(custom);
+        }
+        return selectedTipPercent;
+      }
+
+      function validateAndCalculate() {
+        let hasError = false;
+
+        const bill = parseNumber(billEl.value);
+        if (billEl.value.trim() === "") {
+          clearInputInvalid(billEl, billErrorEl);
+          billEl.classList.remove("invalid");
+        } else if (bill === null || Number.isNaN(bill)) {
+          setInputInvalid(billEl, billErrorEl, "Enter a valid number.");
+          hasError = true;
+        } else if (bill < 0) {
+          setInputInvalid(billEl, billErrorEl, "Bill cannot be negative.");
+          hasError = true;
+        } else {
+          clearInputInvalid(billEl, billErrorEl);
+        }
+
+        const tipPercent = getTipPercent();
+        const customFilled = tipCustomEl.value.trim() !== "";
+        if (customFilled) {
+          if (tipPercent === null || Number.isNaN(tipPercent)) {
+            setInputInvalid(tipCustomEl, tipErrorEl, "Enter a valid tip percentage.");
+            hasError = true;
+          } else if (tipPercent < 0) {
+            setInputInvalid(tipCustomEl, tipErrorEl, "Tip cannot be negative.");
+            hasError = true;
+          } else {
+            clearInputInvalid(tipCustomEl, tipErrorEl);
+          }
+        } else {
+          clearInputInvalid(tipCustomEl, tipErrorEl);
+        }
+
+        const people = parseNumber(peopleEl.value);
+        if (peopleEl.value.trim() === "") {
+          setInputInvalid(peopleEl, peopleErrorEl, "Enter number of people.");
+          hasError = true;
+        } else if (people === null || Number.isNaN(people)) {
+          setInputInvalid(peopleEl, peopleErrorEl, "Enter a valid whole number.");
+          hasError = true;
+        } else if (people < 1) {
+          setInputInvalid(peopleEl, peopleErrorEl, "At least one person required.");
+          hasError = true;
+        } else if (!Number.isInteger(people)) {
+          setInputInvalid(peopleEl, peopleErrorEl, "Use a whole number of people.");
+          hasError = true;
+        } else {
+          clearInputInvalid(peopleEl, peopleErrorEl);
+        }
+
+        const effectiveTip = customFilled ? tipPercent : selectedTipPercent;
+        const billOk = bill !== null && !Number.isNaN(bill) && bill >= 0 && billEl.value.trim() !== "";
+        const tipOk = effectiveTip !== null && !Number.isNaN(effectiveTip) && effectiveTip >= 0;
+        const peopleOk = people !== null && !Number.isNaN(people) && people >= 1 && Number.isInteger(people);
+
+        if (!billOk || !tipOk || !peopleOk || hasError) {
+          resultsEl.classList.add("invalid-state");
+          tipAmountEl.textContent = "—";
+          totalEl.textContent = "—";
+          perPersonEl.textContent = "—";
+          return;
+        }
+
+        resultsEl.classList.remove("invalid-state");
+        const tipAmount = bill * (effectiveTip / 100);
+        const total = bill + tipAmount;
+        const perPerson = total / people;
+
+        tipAmountEl.textContent = formatMoney(tipAmount);
+        totalEl.textContent = formatMoney(total);
+        perPersonEl.textContent = formatMoney(perPerson);
+      }
+
+      tipBtns.forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          selectedTipPercent = Number(btn.getAttribute("data-tip"));
+          tipCustomEl.value = "";
+          syncTipButtons(selectedTipPercent);
+          validateAndCalculate();
+        });
+      });
+
+      tipCustomEl.addEventListener("input", function () {
+        if (tipCustomEl.value.trim() !== "") {
+          tipBtns.forEach(function (b) {
+            b.classList.remove("active");
+          });
+        } else {
+          syncTipButtons(selectedTipPercent);
+        }
+        validateAndCalculate();
+      });
+
+      billEl.addEventListener("input", validateAndCalculate);
+      peopleEl.addEventListener("input", validateAndCalculate);
+
+      syncTipButtons(selectedTipPercent);
+      validateAndCalculate();
+    })();
+  </script>
+</body>
+</html>
